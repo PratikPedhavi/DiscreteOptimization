@@ -27,22 +27,35 @@ def solve_it(input_data):
     weight = 0
     taken = [0]*len(items)
 
-    for item in items:
-        if weight + item.weight <= capacity:
-            taken[item.index] = 1
-            value += item.value
-            weight += item.weight
-    
+    value, outlist = optimal_comb(items,capacity,item_count-1,[])
+    taken = [1 if k in outlist else taken[k] for k in range(len(taken))]
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
     output_data += ' '.join(map(str, taken))
     return output_data
 
+def optimal_comb(items, cap, item, outlist):
+    if item == -1:
+        return 0, outlist
+    elif items[item].weight <= cap:
+        cond1 = optimal_comb(items,cap,item-1,outlist)
+        cond2 = optimal_comb(items,cap-items[item].weight,item-1,outlist)
+        skipped = cond1[0]
+        selected = items[item].value + cond2[0]
+        if skipped > selected:
+            return skipped, cond1[1]
+        else:
+            return selected, cond2[1] + [item]
+    else:
+        skipped = optimal_comb(items,cap,item-1,outlist)
+        return skipped[0], outlist + skipped[1]
 
 if __name__ == '__main__':
     import sys
     if len(sys.argv) > 1:
         file_location = sys.argv[1].strip()
+    # if 1:
+    #     file_location = r'C:\Users\Pradnya\Documents\Work\Coursera\DiscreteOptimization\Assignments\knapsack\data\ks_4_0'
         with open(file_location, 'r') as input_data_file:
             input_data = input_data_file.read()
         print(solve_it(input_data))
