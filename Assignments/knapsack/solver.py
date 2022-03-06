@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from ortools.sat.python import cp_model
 from collections import namedtuple
 Item = namedtuple("Item", ['index', 'value', 'weight'])
 
@@ -21,8 +22,8 @@ def solve_it(input_data):
         parts = line.split()
         items.append(Item(i-1, int(parts[0]), int(parts[1])))
 
-    print('Weights: ', [item.weight for item in items])
-    print('Values: ', [item.value for item in items])
+    # print('Weights: ', [item.weight for item in items])
+    # print('Values: ', [item.value for item in items])
     # a trivial algorithm for filling the knapsack
     # it takes items in-order until the knapsack is full
     value = 0
@@ -37,7 +38,10 @@ def solve_it(input_data):
     # value, taken = dynamic_prog(items, capacity)
 
     # Depth First Branch and Bound
-    value,taken = depth_first(items, capacity)
+    # value,taken = depth_first(items, capacity)
+
+    # ORTOOLS MIP
+    value, taken = ortools_mip(items, capacity)
 
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
@@ -121,20 +125,39 @@ class branchNbound():
                 if self.max_value <= child_value:
                     self.max_value = child_value
                     self.selection = child_slct
-                print("Item: ",item.index, 'Max Val: ', self.max_value, 'Max Select: ', self.selection,
-                    'Value: ',child_value, 'Room: ',child_room, 'Estimate: ',estimate, 'Branch: ', 
-                    brnch, 'Selected: ',child_slct)
                 if item.index < len(self.items) - 1:
                     child_value,child_slct = self.traverse(self.items[item.index+1],child_value,child_room,estimate,child_slct)
             value = max(child_value,value)
         return value, child_slct
+
+def ortools_mip(items,cap):
+    obj = 0
+    taken = [0] * len(items)
+    model = cp_model.CpModel()
+    
+    x = {}
+    for item in items:
+        x[item.index] = model.NewBoolVar('x[{}]'.format(item.index))
+
+    model.Add(sum([item.weight*x[item.index] for item in items]) <= cap)
+
+    objective = sum([item.value*x[item.index] for item in items])
+    model.Maximize(objective)
+
+    solver = cp_model.CpSolver()
+    status = solver.Solve(model)
+
+    if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+        obj = int(solver.ObjectiveValue())
+        taken = [int(solver.BooleanValue(x[i])) for i in range(len(items))]
+    return obj, taken
 
 if __name__ == '__main__':
     import sys
     # if len(sys.argv) > 1:
     #     file_location = sys.argv[1].strip()
     if 1:
-        file_location = r'C:\Users\Pradnya\Documents\Work\Coursera\DiscreteOptimization\Assignments\knapsack\data\ks_4_0_custom'
+        file_location = r'C:\Users\Pradnya\Documents\Work\Coursera\DiscreteOptimization\Assignments\knapsack\data\ks_1000_0'
         with open(file_location, 'r') as input_data_file:
             input_data = input_data_file.read()
         print(solve_it(input_data))
