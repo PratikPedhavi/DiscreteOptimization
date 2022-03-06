@@ -37,7 +37,7 @@ def solve_it(input_data):
     # value, taken = dynamic_prog(items, capacity)
 
     # Depth First Branch and Bound
-    value,selection = depth_first(items, capacity)
+    value,taken = depth_first(items, capacity)
 
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
@@ -88,7 +88,7 @@ def depth_first(items, cap):
     estimate = sum([item.value for item in items])
     cls_bnb = branchNbound(selection,items)
     _ = cls_bnb.traverse(items[0],value,room,estimate)
-    value,selection = cls_bnb.max_value, cls_bnb.selection
+    value,selection = cls_bnb.max_value, [1 if item.index in cls_bnb.selection else 0 for item in items]
     return value, selection
 
 class branchNbound():
@@ -102,7 +102,9 @@ class branchNbound():
                 child_value = value
                 child_room = room
                 child_slct = slct.copy()
-                if item.weight <= room and branch:
+                check1 = (item.weight <= room)
+                check2 = (estimate >= self.max_value)
+                if check1 and check2 and branch:
                     brnch = 'left'
                     child_value = value + item.value
                     child_room = room - item.weight
@@ -113,6 +115,8 @@ class branchNbound():
                     brnch = 'right'
                     estimate -= item.value
                 else:
+                    continue
+                if estimate < self.max_value:
                     continue
                 if self.max_value <= child_value:
                     self.max_value = child_value
